@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Community Meeting Decision Tracker</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">CM</div><div><strong>Community</strong><span>Decision Tracker</span></div></div>
+    <nav aria-label="Main navigation">
+      <button class="nav-link active" data-page="dashboard"><span>▦</span> Dashboard</button>
+      <button class="nav-link" data-page="meetings"><span>▣</span> Meetings</button>
+      <button class="nav-link" data-page="attendance"><span>✔</span> Attendance</button>
+      <button class="nav-link" data-page="tasks"><span>☑</span> Action tracker</button>
+      <button class="nav-link" data-page="reminders"><span>⏰</span> Reminders <b class="nav-badge hidden" id="reminder-badge">0</b></button>
+    </nav>
+    <div class="sidebar-note"><strong>Stay organized.</strong><p>Keep every decision, owner and deadline in one place.</p></div>
+    <div class="sidebar-footer">CSE-326 · Web Application Project</div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div><p class="eyebrow">COMMUNITY MANAGEMENT</p><h1 id="page-title">Dashboard</h1></div>
+      <button class="primary-btn" id="header-add-meeting">＋ New meeting</button>
+    </header>
+
+    <!-- DASHBOARD -->
+    <section class="page active" id="dashboard-page">
+      <div class="welcome-row"><div><h2>Meeting overview</h2><p class="muted">A quick look at meetings and the work that follows.</p></div><span class="today" id="today-label"></span></div>
+      <div id="reminder-banner" class="alert-banner hidden"></div>
+      <div class="stats-grid">
+        <article class="stat-card"><span class="stat-label">Total meetings</span><strong id="stat-meetings">0</strong><span class="stat-foot">Recorded meetings</span></article>
+        <article class="stat-card"><span class="stat-label">Avg. attendance</span><strong id="stat-attendance">–</strong><span class="stat-foot">Across all meetings</span></article>
+        <article class="stat-card"><span class="stat-label">Open tasks</span><strong id="stat-open">0</strong><span class="stat-foot">Pending or in progress</span></article>
+        <article class="stat-card"><span class="stat-label">Completed tasks</span><strong id="stat-completed">0</strong><span class="stat-foot">Successfully finished</span></article>
+        <article class="stat-card"><span class="stat-label">Overdue tasks</span><strong id="stat-overdue">0</strong><span class="stat-foot">Past their deadline</span></article>
+      </div>
+      <div class="content-grid">
+        <section class="panel"><div class="panel-heading"><div><h3>Recent meetings</h3><p class="muted">Your latest meeting records</p></div><button class="text-btn" data-go="meetings">View all →</button></div><div id="recent-meetings" class="list-area"></div></section>
+        <section class="panel"><div class="panel-heading"><div><h3>Tasks needing attention</h3><p class="muted">Work that is not yet complete</p></div><button class="text-btn" data-go="tasks">View all →</button></div><div id="attention-tasks" class="list-area"></div></section>
+      </div>
+    </section>
+
+    <!-- MEETINGS -->
+    <section class="page" id="meetings-page">
+      <div class="section-toolbar"><div><h2>Meetings</h2><p class="muted">Create and maintain community meeting records.</p></div><button class="primary-btn" id="add-meeting">＋ Add meeting</button></div>
+      <div id="meetings-list" class="meeting-grid"></div>
+    </section>
+
+    <!-- ATTENDANCE REGISTER -->
+    <section class="page" id="attendance-page">
+      <div class="section-toolbar"><div><h2>Attendance register</h2><p class="muted">Attendance call for every meeting, just like a class register. Open a meeting and choose “Take attendance”.</p></div><button class="primary-btn" id="add-member">＋ Add member</button></div>
+      <div class="legend">
+        <span><b class="dot p">P</b> Present</span>
+        <span><b class="dot l">L</b> Late (counts as attended)</span>
+        <span><b class="dot a">A</b> Absent</span>
+        <span>Members below 75% are highlighted in red</span>
+      </div>
+      <div class="panel table-panel register-panel">
+        <div class="table-wrap"><table class="register" id="register-table"></table></div>
+        <div id="empty-register" class="empty-state hidden">No members yet. Select “Add member” to build your Attendance list.</div>
+        <div id="register-hint" class="empty-state hidden">No Attendance taken yet. Go to Meetings and select “Take Attendance”.</div>
+      </div>
+    </section>
+
+    <!-- ACTION TRACKER -->
+    <section class="page" id="tasks-page">
+      <div class="section-toolbar"><div><h2>Action tracker</h2><p class="muted">Assign responsibility and follow tasks through to completion.</p></div><button class="primary-btn" id="add-task">＋ Add task</button></div>
+      <div class="filters"><input id="task-search" type="search" placeholder="Search tasks or assignees..." aria-label="Search tasks"><select id="task-filter" aria-label="Filter tasks"><option value="all">All statuses</option><option>Pending</option><option>In Progress</option><option>Completed</option></select></div>
+      <div class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Task</th><th>Meeting</th><th>Assigned to</th><th>Deadline</th><th>Status</th><th>Action</th></tr></thead><tbody id="tasks-table"></tbody></table></div><div id="empty-tasks" class="empty-state hidden">No tasks yet. Add an action item to get started.</div></div>
+    </section>
+
+    <!-- REMINDERS -->
+    <section class="page" id="reminders-page">
+      <div class="section-toolbar"><div><h2>Reminders</h2><p class="muted">Remind people about tasks that are overdue or due soon. One message per person, listing all their pending tasks.</p></div></div>
+      <div class="panel reminder-settings">
+        <label class="inline-label">Remind about tasks due within
+          <select id="remind-days"><option value="1">1 day</option><option value="2">2 days</option><option value="3">3 days</option><option value="5">5 days</option><option value="7">7 days</option></select>
+        </label>
+        <button class="small-btn accent" id="enable-notify">🔔 Enable browser alerts</button>
+        <span class="muted" id="notify-status"></span>
+      </div>
+      <div id="reminder-list" class="reminder-grid"></div>
+    </section>
+  </main>
+
+  <!-- Meeting dialog -->
+  <dialog id="meeting-dialog" class="modal">
+    <form id="meeting-form" method="dialog">
+      <div class="modal-heading"><div><p class="eyebrow">MEETING RECORD</p><h2 id="meeting-dialog-title">Add a meeting</h2></div><button type="button" class="close-btn" data-close="meeting-dialog" aria-label="Close">×</button></div>
+      <label>Meeting title<input name="title" required maxlength="100" placeholder="e.g. Monthly Society Meeting"></label>
+      <div class="form-row"><label>Date<input name="date" type="date" required></label><label>Location<input name="location" required maxlength="100" placeholder="Community Hall"></label></div>
+      <label>Agenda<textarea name="agenda" rows="3" placeholder="Topics to discuss"></textarea></label>
+      <label>Meeting minutes<textarea name="minutes" rows="3" placeholder="Summary of the discussion (can be added later)"></textarea></label>
+      <div class="modal-actions"><button type="button" class="secondary-btn" data-close="meeting-dialog">Cancel</button><button class="primary-btn" type="submit">Save meeting</button></div>
+    </form>
+  </dialog>
+
+  <!-- Task dialog -->
+  <dialog id="task-dialog" class="modal">
+    <form id="task-form" method="dialog">
+      <div class="modal-heading"><div><p class="eyebrow">ACTION ITEM</p><h2>Add a task</h2></div><button type="button" class="close-btn" data-close="task-dialog" aria-label="Close">×</button></div>
+      <label>Task description<input name="title" required maxlength="140" placeholder="e.g. Repair streetlights"></label>
+      <label>Related meeting<select name="meetingId" id="task-meeting" required></select></label>
+      <div class="form-row"><label>Assigned to<input name="assignee" list="member-list" required maxlength="80" placeholder="Pick a member or type a name" autocomplete="off"></label><label>Deadline<input name="deadline" type="date" required></label></div>
+      <datalist id="member-list"></datalist>
+      <label>Contact for reminders (email or phone) <span class="optional">optional – filled automatically for saved members</span><input name="contact" maxlength="100" placeholder="name@email.com or 9876543210"></label>
+      <label>Status<select name="status"><option>Pending</option><option>In Progress</option><option>Completed</option></select></label>
+      <div class="modal-actions"><button type="button" class="secondary-btn" data-close="task-dialog">Cancel</button><button class="primary-btn" type="submit">Save task</button></div>
+    </form>
+  </dialog>
+
+  <!-- Member dialog -->
+  <dialog id="member-dialog" class="modal">
+    <form id="member-form" method="dialog">
+      <div class="modal-heading"><div><p class="eyebrow">ROLL LIST</p><h2 id="member-dialog-title">Add a member</h2></div><button type="button" class="close-btn" data-close="member-dialog" aria-label="Close">×</button></div>
+      <input type="hidden" name="memberId">
+      <div class="form-row"><label>Member no.<input name="roll" type="number" min="1" required></label><label>Full name<input name="name" required maxlength="80" placeholder="e.g. Amit Sharma"></label></div>
+      <label>Contact for reminders (email or phone / WhatsApp)<input name="contact" maxlength="100" placeholder="name@email.com or 9876543210"></label>
+      <div class="modal-actions"><button type="button" class="secondary-btn" data-close="member-dialog">Cancel</button><button class="primary-btn" type="submit">Save member</button></div>
+    </form>
+  </dialog>
+
+  <!-- Roll-call dialog -->
+  <dialog id="attendance-dialog" class="modal modal-wide">
+    <div class="modal-heading"><div><p class="eyebrow">ROLL CALL</p><h2 id="attendance-title">Take attendance</h2></div><button type="button" class="close-btn" data-close="attendance-dialog" aria-label="Close">×</button></div>
+    <div id="attendance-summary"></div>
+    <div id="attendance-list" class="att-list"></div>
+    <div class="modal-actions">
+      <button type="button" class="secondary-btn" id="mark-all-present">All present</button>
+      <button type="button" class="secondary-btn" id="mark-all-absent">All absent</button>
+      <button type="button" class="primary-btn" id="save-attendance">Save attendance</button>
+    </div>
+  </dialog>
+
+  <!-- Single-task reminder dialog -->
+  <dialog id="reminder-dialog" class="modal">
+    <div class="modal-heading"><div><p class="eyebrow">SEND REMINDER</p><h2>Remind assignee</h2></div><button type="button" class="close-btn" data-close="reminder-dialog" aria-label="Close">×</button></div>
+    <div id="reminder-dialog-body"></div>
+    <div class="modal-actions"><button class="secondary-btn" data-close="reminder-dialog">Close</button></div>
+  </dialog>
+
+  <!-- Meeting details -->
+  <dialog id="details-dialog" class="modal">
+    <div id="meeting-details"></div>
+    <div class="modal-actions"><button class="secondary-btn" data-close="details-dialog">Close</button></div>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
