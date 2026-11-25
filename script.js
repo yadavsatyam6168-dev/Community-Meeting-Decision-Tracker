@@ -7,6 +7,62 @@ let data = loadData();
 let toastTimer;
 let sheet = null; // open roll-call: { meetingId, draft: { memberId: "P" | "L" | "A" } }
 
+
+/* ====================== Demo role-based login ====================== */
+// Change these demo credentials before presenting. This frontend-only login is NOT secure.
+const DEMO_USERS = {
+  admin: { password: "Admin@123", role: "Admin" },
+  head: { password: "Head@123", role: "Head of Society" },
+  viewer: { password: "View@123", role: "Viewer" }
+};
+let currentUser = null;
+function canEdit() { return !!currentUser && ["Admin", "Head of Society"].includes(currentUser.role); }
+function requireEditor() {
+  if (canEdit()) return true;
+  showToast("View-only access: only Admin or Head of Society can make changes.");
+  return false;
+}
+function applyRoleUI() {
+  document.body.classList.add("authenticated");
+  document.getElementById("current-user-label").textContent = `${currentUser.username} · ${currentUser.role}`;
+  document.querySelectorAll("#header-add-meeting, #add-meeting, #add-member, #add-task, #mark-all-present, #mark-all-absent, #save-attendance, #enable-notify").forEach(el => el.classList.toggle("hidden-by-role", !canEdit()));
+  document.querySelectorAll("[data-delete-meeting], [data-delete-task], [data-edit-member], [data-delete-member], [data-attendance]").forEach(el => el.classList.toggle("hidden-by-role", !canEdit()));
+  renderAll();
+}
+document.getElementById("login-form").addEventListener("submit", event => {
+  event.preventDefault();
+  const username = document.getElementById("login-username").value.trim().toLowerCase();
+  const password = document.getElementById("login-password").value;
+  const account = DEMO_USERS[username];
+  if (!account || account.password !== password) {
+    document.getElementById("login-error").textContent = "Incorrect username or password.";
+    return;
+  }
+  currentUser = { username, role: account.role };
+  document.getElementById("login-error").textContent = "";
+  applyRoleUI();
+});
+document.getElementById("logout-button").addEventListener("click", () => {
+  currentUser = null; document.body.classList.remove("authenticated");
+  document.getElementById("login-form").reset();
+});
+// Block write actions even if a viewer manually triggers a hidden control.
+document.addEventListener("click", event => {
+  if (canEdit()) return;
+  const blocked = event.target.closest("#header-add-meeting, #add-meeting, #add-member, #add-task, #mark-all-present, #mark-all-absent, #save-attendance, #enable-notify, [data-delete-meeting], [data-delete-task], [data-edit-member], [data-delete-member], [data-attendance], [data-mark], [data-reminded], [data-copy-reminder]");
+  if (blocked) { event.preventDefault(); event.stopImmediatePropagation(); requireEditor(); }
+}, true);
+document.addEventListener("submit", event => {
+  if (!canEdit() && ["meeting-form", "task-form", "member-form"].includes(event.target.id)) {
+    event.preventDefault(); event.stopImmediatePropagation(); requireEditor();
+  }
+}, true);
+document.addEventListener("change", event => {
+  if (!canEdit() && (event.target.matches("[data-status-id]") || event.target.id === "remind-days")) {
+    event.preventDefault(); event.stopImmediatePropagation(); renderAll(); requireEditor();
+  }
+}, true);
+
 /* ====================== Data ====================== */
 function loadData() {
   try {
@@ -241,7 +297,7 @@ function renderMeetings() {
     const taskCount = data.tasks.filter(t => t.meetingId === m.id).length;
     const s = meetingStats(m);
     const attText = m.attendanceTaken ? `${s.attended}/${s.total} attended · ${s.a} absent` : "Attendance not taken";
-    return `<article class="meeting-card"><h3>${escapeHTML(m.title)}</h3><div class="meeting-meta"><span>▣ ${formatDate(m.date)}</span><span>⌖ ${escapeHTML(m.location)}</span><span>☑ ${taskCount} task(s)</span><span>✔ ${attText}</span></div><p>${escapeHTML(m.agenda || "No agenda added.")}</p><div class="card-actions"><button class="small-btn accent" data-attendance="${m.id}">${m.attendanceTaken ? "Edit attendance" : "Take attendance"}</button><button class="small-btn" data-details="${m.id}">View details</button><button class="small-btn" data-delete-meeting="${m.id}">Delete</button></div></article>`;
+    return `<article class="meeting-card"><h3>${escapeHTML(m.title)}</h3><div class="meeting-meta"><span>▣ ${formatDate(m.date)}</span><span>⌖ ${escapeHTML(m.location)}</span><span>☑ ${taskCount} task(s)</span><span>✔ ${attText}</span></div><p>${escapeHTML(m.agenda || "No agenda added.")}</p><div class="card-actions">${canEdit() ? `<button class="small-btn accent" data-attendance="${m.id}">${m.attendanceTaken ? "Edit attendance" : "Take attendance"}</button>` : ""}<button class="small-btn" data-details="${m.id}">View details</button>${canEdit() ? `<button class="small-btn" data-delete-meeting="${m.id}">Delete</button>` : ""}</div></article>`;
   }).join("") : '<div class="panel empty-state">No meetings yet. Select “Add meeting” to create your first record.</div>';
 }
 function renderRegister() {
@@ -251,7 +307,7 @@ function renderRegister() {
   document.getElementById("empty-register").classList.toggle("hidden", members.length > 0);
   document.getElementById("register-hint").classList.toggle("hidden", !members.length || taken.length > 0);
   if (!members.length) { table.innerHTML = ""; return; }
-  const head = `<thead><tr><th>Member</th>${taken.map(m => `<th class="reg-col"><button class="reg-head" data-attendance="${m.id}" title="Edit attendance for ${escapeHTML(m.title)}">${formatShort(m.date)}<small>${escapeHTML(m.title)}</small></button></th>`).join("")}<th>Attended</th><th>%</th><th>Manage</th></tr></thead>`;
+  const head = `<thead><tr><th>Member</th>${taken.map(m => `<th class="reg-col">${canEdit() ? `<button class="reg-head" data-attendance="${m.id}" title="Edit attendance for ${escapeHTML(m.title)}">${formatShort(m.date)}<small>${escapeHTML(m.title)}</small></button>` : `${formatShort(m.date)}<small>${escapeHTML(m.title)}</small>`}</th>`).join("")}<th>Attended</th><th>%</th>${canEdit() ? "<th>Manage</th>" : ""}</tr></thead>`;
   const rows = members.map(mem => {
     const st = memberStats(mem);
     const low = st.percent !== null && st.percent < LOW_ATTENDANCE;
@@ -259,7 +315,7 @@ function renderRegister() {
       const v = (m.attendance || {})[mem.id];
       return `<td class="reg-cell ${v ? v.toLowerCase() : "none"}">${v || "–"}</td>`;
     }).join("");
-    return `<tr><td class="member-cell"><span class="roll">${escapeHTML(mem.roll)}</span>${escapeHTML(mem.name)}</td>${cells}<td>${st.total ? st.attended + "/" + st.total : "–"}</td><td>${st.total ? `<span class="status ${low ? "absent" : "present"}">${st.percent}%</span>` : "–"}</td><td><button class="table-action" data-edit-member="${mem.id}">Edit</button> <button class="table-action" data-delete-member="${mem.id}">Delete</button></td></tr>`;
+    return `<tr><td class="member-cell"><span class="roll">${escapeHTML(mem.roll)}</span>${escapeHTML(mem.name)}</td>${cells}<td>${st.total ? st.attended + "/" + st.total : "–"}</td><td>${st.total ? `<span class="status ${low ? "absent" : "present"}">${st.percent}%</span>` : "–"}</td>${canEdit() ? `<td><button class="table-action" data-edit-member="${mem.id}">Edit</button> <button class="table-action" data-delete-member="${mem.id}">Delete</button></td>` : ""}</tr>`;
   }).join("");
   table.innerHTML = head + `<tbody>${rows}</tbody>`;
 }
@@ -274,7 +330,7 @@ function renderTasks() {
   document.getElementById("tasks-table").innerHTML = tasks.map(t => {
     const meeting = data.meetings.find(m => m.id === t.meetingId);
     const remind = t.status !== "Completed" ? `<button class="table-action" data-remind-task="${t.id}">⏰ Remind</button> ` : "";
-    return `<tr><td>${escapeHTML(t.title)}</td><td>${escapeHTML(meeting?.title || "Meeting deleted")}</td><td>${escapeHTML(t.assignee)}</td><td>${formatDate(t.deadline)}</td><td>${statusBadge(t)}</td><td><select class="inline-status" data-status-id="${t.id}" aria-label="Change task status"><option ${t.status==="Pending"?"selected":""}>Pending</option><option ${t.status==="In Progress"?"selected":""}>In Progress</option><option ${t.status==="Completed"?"selected":""}>Completed</option></select> ${remind}<button class="table-action" data-delete-task="${t.id}">Delete</button></td></tr>`;
+    return `<tr><td>${escapeHTML(t.title)}</td><td>${escapeHTML(meeting?.title || "Meeting deleted")}</td><td>${escapeHTML(t.assignee)}</td><td>${formatDate(t.deadline)}</td><td>${statusBadge(t)}</td><td>${canEdit() ? `<select class="inline-status" data-status-id="${t.id}" aria-label="Change task status"><option ${t.status==="Pending"?"selected":""}>Pending</option><option ${t.status==="In Progress"?"selected":""}>In Progress</option><option ${t.status==="Completed"?"selected":""}>Completed</option></select> ${remind}<button class="table-action" data-delete-task="${t.id}">Delete</button>` : "View only"}</td></tr>`;
   }).join("");
   document.getElementById("empty-tasks").classList.toggle("hidden", tasks.length > 0);
 }
@@ -373,16 +429,18 @@ function openReminderFor(taskId) {
 
 /* ====================== Events ====================== */
 document.querySelectorAll(".nav-link").forEach(btn => btn.addEventListener("click", () => navigate(btn.dataset.page)));
-document.getElementById("header-add-meeting").addEventListener("click", () => openDialog("meeting-dialog"));
-document.getElementById("add-meeting").addEventListener("click", () => openDialog("meeting-dialog"));
-document.getElementById("add-member").addEventListener("click", () => openMemberDialog());
+document.getElementById("header-add-meeting").addEventListener("click", () => { if (requireEditor()) openDialog("meeting-dialog"); });
+document.getElementById("add-meeting").addEventListener("click", () => { if (requireEditor()) openDialog("meeting-dialog"); });
+document.getElementById("add-member").addEventListener("click", () => { if (requireEditor()) openMemberDialog(); });
 document.getElementById("add-task").addEventListener("click", () => {
+  if (!requireEditor()) return;
   if (!data.meetings.length) return showToast("Create a meeting before adding a task.");
   openDialog("task-dialog");
 });
 
 document.getElementById("meeting-form").addEventListener("submit", event => {
   event.preventDefault();
+  if (!requireEditor()) return;
   const form = event.currentTarget;
   const values = Object.fromEntries(new FormData(form).entries());
   data.meetings.push({ id: uid(), ...values, attendance: {}, attendanceTaken: false, createdAt: new Date().toISOString() });
@@ -390,6 +448,7 @@ document.getElementById("meeting-form").addEventListener("submit", event => {
 });
 document.getElementById("task-form").addEventListener("submit", event => {
   event.preventDefault();
+  if (!requireEditor()) return;
   const form = event.currentTarget;
   const values = Object.fromEntries(new FormData(form).entries());
   if (!values.meetingId) return showToast("Please select a meeting.");
@@ -402,6 +461,7 @@ document.querySelector('#task-form [name="assignee"]').addEventListener("input",
 });
 document.getElementById("member-form").addEventListener("submit", event => {
   event.preventDefault();
+  if (!requireEditor()) return;
   const form = event.currentTarget;
   const v = Object.fromEntries(new FormData(form).entries());
   const roll = Number(v.roll), name = v.name.trim();

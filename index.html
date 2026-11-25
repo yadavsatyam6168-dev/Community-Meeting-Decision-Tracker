@@ -8,6 +8,22 @@
   <script src="script.js" defer></script>
 </head>
 <body>
+  <!-- LOGIN SCREEN: demo-only role access -->
+  <section id="login-screen" class="login-screen">
+    <form id="login-form" class="login-card">
+      <div class="brand-mark login-mark">CM</div>
+      <p class="eyebrow">COMMUNITY MANAGEMENT</p>
+      <h1>Sign in</h1>
+      <p class="muted">Login as Admin, Head of Society, or Viewer.</p>
+      <label>Username<input id="login-username" autocomplete="username" required placeholder="Enter username"></label>
+      <label>Password<input id="login-password" type="password" autocomplete="current-password" required placeholder="Enter password"></label>
+      <button class="primary-btn login-submit" type="submit">Login</button>
+      <p id="login-error" class="login-error" role="alert"></p>
+      <div class="demo-credentials"><strong>Demo accounts</strong><br>Admin: admin / Admin@123<br>Head: head / Head@123<br>Viewer: viewer / View@123</div>
+    </form>
+  </section>
+  <div id="app-shell" class="app-shell">
+
   <aside class="sidebar">
     <div class="brand"><div class="brand-mark">CM</div><div><strong>Community</strong><span>Decision Tracker</span></div></div>
     <nav aria-label="Main navigation">
@@ -24,7 +40,7 @@
   <main class="main">
     <header class="topbar">
       <div><p class="eyebrow">COMMUNITY MANAGEMENT</p><h1 id="page-title">Dashboard</h1></div>
-      <button class="primary-btn" id="header-add-meeting">＋ New meeting</button>
+      <div class="header-actions"><span id="current-user-label" class="role-label"></span><button class="secondary-btn" id="logout-button" type="button">Log out</button><button class="primary-btn" id="header-add-meeting">＋ New meeting</button></div>
     </header>
 
     <!-- DASHBOARD -->
@@ -149,5 +165,6 @@
     <div class="modal-actions"><button class="secondary-btn" data-close="details-dialog">Close</button></div>
   </dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </div><!-- /app-shell -->
 </body>
 </html>
